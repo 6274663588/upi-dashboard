@@ -6,83 +6,119 @@
 <title>UPI Payment Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
 <div class="w-full max-w-xl bg-white shadow-2xl rounded-2xl p-8">
 
   <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">UPI Payment Dashboard</h1>
 
   <!-- App Name -->
   <div class="mb-4">
-    <label for="appNameInput" class="block text-gray-700 font-semibold mb-2">App Name</label>
-    <input id="appNameInput" type="text" placeholder="e.g. LoanApp"
+    <label for="appName" class="block text-gray-700 font-semibold mb-2">App Name (Payment Page Header)</label>
+    <input id="appName" type="text" placeholder="My App" 
       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
   </div>
 
-  <!-- Client Name -->
+  <!-- Standard UPI ID -->
   <div class="mb-4">
-    <label for="customerName" class="block text-gray-700 font-semibold mb-2">Client Name</label>
-    <input id="customerName" type="text" placeholder="John Doe"
+    <label for="upiId" class="block text-gray-700 font-semibold mb-2">Standard UPI ID</label>
+    <input id="upiId" type="text" placeholder="yourname@upi" 
       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
   </div>
 
-  <!-- Amount -->
+  <!-- Client Name & Amount -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label for="customerName" class="block text-gray-700 font-semibold mb-2">Client Name</label>
+      <input id="customerName" type="text" placeholder="John Doe" 
+        class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+    </div>
+    <div>
+      <label for="amount" class="block text-gray-700 font-semibold mb-2">Amount (INR)</label>
+      <input id="amount" type="number" placeholder="1000" 
+        class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+    </div>
+  </div>
+
+  <!-- Standard Field -->
   <div class="mb-4">
-    <label for="amount" class="block text-gray-700 font-semibold mb-2">Amount (INR)</label>
-    <input id="amount" type="number" placeholder="1000"
+    <label for="field" class="block text-gray-700 font-semibold mb-2">Standard Field / Note</label>
+    <input id="field" type="text" placeholder="Loan Payment" 
       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
   </div>
 
-  <!-- UPI ID -->
+  <!-- QR Upload -->
   <div class="mb-4">
-    <label for="upiId" class="block text-gray-700 font-semibold mb-2">UPI ID</label>
-    <input id="upiId" type="text" placeholder="yourname@upi"
+    <label for="qrFile" class="block text-gray-700 font-semibold mb-2">Upload QR Code (optional)</label>
+    <input id="qrFile" type="file" accept="image/*" 
       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+    <img id="qrPreview" class="mt-3 max-w-xs rounded-xl shadow-md hidden" alt="QR Preview"/>
   </div>
 
-  <!-- QR Image URL -->
-  <div class="mb-6">
-    <label for="qrUrl" class="block text-gray-700 font-semibold mb-2">QR Image URL (Optional)</label>
-    <input id="qrUrl" type="text" placeholder="https://example.com/qr.png"
-      class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-  </div>
-
-  <button onclick="generateLink()"
-    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
+  <!-- Generate Button -->
+  <button onclick="generateLink()" 
+    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition mb-4">
     Generate Payment Link
   </button>
 
   <!-- Output -->
-  <div id="output" class="mt-6 p-4 bg-gray-50 rounded-lg border hidden">
+  <div id="output" class="hidden p-4 bg-gray-50 rounded-lg border">
     <p class="text-gray-700 font-medium mb-2">Generated Link:</p>
-    <a id="paymentLink" href="#" target="_blank"
+    <a id="paymentLink" href="#" target="_blank" 
        class="break-all text-indigo-600 underline hover:text-indigo-800"></a>
   </div>
-
 </div>
 
 <script>
-function generateLink() {
-  const app = document.getElementById('appNameInput').value.trim();
-  const client = document.getElementById('customerName').value.trim();
-  const amount = document.getElementById('amount').value.trim();
-  const upi = document.getElementById('upiId').value.trim();
-  const qr = document.getElementById('qrUrl').value.trim();
+const qrInput = document.getElementById('qrFile');
+const qrPreview = document.getElementById('qrPreview');
 
-  if (!app || !client || !amount || !upi) {
-    alert("Please fill all required fields.");
+qrInput.addEventListener('change', () => {
+  const file = qrInput.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      qrPreview.src = e.target.result;
+      qrPreview.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  } else {
+    qrPreview.src = '';
+    qrPreview.classList.add('hidden');
+  }
+});
+
+function generateLink() {
+  const upiId = document.getElementById('upiId').value.trim();
+  const field = document.getElementById('field').value.trim();
+  const name = document.getElementById('customerName').value.trim();
+  const amount = document.getElementById('amount').value.trim();
+  const app = document.getElementById('appName').value.trim() || "Payment";
+
+  if (!upiId || !field || !name || !amount) {
+    alert("Please fill all fields.");
     return;
   }
 
-  // Expiry timestamp: current time + 9 minutes
-  const expiry = Date.now() + 9 * 60 * 1000;
+  const qrFile = document.getElementById('qrFile').files[0];
+  if (qrFile) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const qrData = encodeURIComponent(e.target.result);
+      createLink(qrData);
+    };
+    reader.readAsDataURL(qrFile);
+  } else {
+    createLink("");
+  }
 
-  // Build pay.html link with parameters
-  const link = `pay.html?app=${encodeURIComponent(app)}&client=${encodeURIComponent(client)}&amount=${encodeURIComponent(amount)}&upi=${encodeURIComponent(upi)}&qr=${encodeURIComponent(qr)}&expiry=${expiry}`;
-
-  const outputLink = document.getElementById('paymentLink');
-  outputLink.href = link;
-  outputLink.innerText = window.location.origin + "/" + link;
-  document.getElementById('output').classList.remove('hidden');
+  function createLink(qrData) {
+    const expiryTime = Date.now() + 9*60*1000; // 9 min countdown
+    const link = `pay.html?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${encodeURIComponent(amount)}&app=${encodeURIComponent(app)}&tn=${encodeURIComponent(field)}&qr=${qrData}&expiry=${expiryTime}`;
+    document.getElementById('paymentLink').href = link;
+    document.getElementById('paymentLink').innerText = link;
+    document.getElementById('output').classList.remove('hidden');
+  }
 }
 </script>
 </body>
