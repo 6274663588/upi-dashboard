@@ -1,0 +1,53 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Your UPI Payment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+  <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Payment Details</h1>
+    
+    <div class="space-y-4 text-gray-700">
+      <div class="flex justify-between">
+        <span class="font-medium">Merchant UPI ID:</span>
+        <span id="merchantName" class="font-semibold text-gray-900"></span>
+      </div>
+      <div class="flex justify-between">
+        <span class="font-medium">Amount:</span>
+        <span class="font-semibold text-green-600 text-lg">₹<span id="amount"></span></span>
+      </div>
+      <div>
+        <span class="font-medium block mb-1">Note:</span>
+        <span id="note" class="block italic text-gray-600"></span>
+      </div>
+    </div>
+
+    <a id="upiButton" href="#" 
+       class="mt-8 w-full inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-lg text-center text-lg">
+       Pay Now
+    </a>
+
+    <p class="mt-4 text-gray-500 text-sm text-center">
+      Clicking will open your UPI app to complete payment
+    </p>
+  </div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const upiId = params.get('pa') || '';
+  const name = params.get('pn') || 'Customer';
+  const amount = params.get('am') || '0';
+  const note = params.get('tn') || '';
+
+  document.getElementById('merchantName').textContent = upiId;
+  document.getElementById('amount').textContent = amount;
+  document.getElementById('note').textContent = note || 'No note provided';
+
+  const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${encodeURIComponent(amount)}&tn=${encodeURIComponent(note)}&cu=INR`;
+  document.getElementById('upiButton').href = upiLink;
+</script>
+</body>
+</html>
