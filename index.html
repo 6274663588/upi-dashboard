@@ -1,632 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UPI Payment Dashboard</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UPI Payment Gateway Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f4f7ff', 100: '#e2e8ff', 500: '#3b5bfd', 600: '#2e46cc', 700: '#22359e'
+            }
+          },
+          boxShadow: { soft: '0 8px 24px rgba(0,0,0,0.08)' }
+        }
+      }
+    }
+  </script>
+  <style>input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-
-<div id="dashboard" class="hidden p-6">
-  <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
-
-  <!-- Settings Section -->
-  <div class="bg-white rounded-xl shadow p-6 mb-6">
-    <h2 class="text-xl font-semibold mb-4">UPI Settings</h2>
-    <input id="upiId" type="text" placeholder="example@upi" class="border rounded p-2 w-full mb-3">
-    <input id="defaultNote" type="text" placeholder="Default note (optional)" class="border rounded p-2 w-full mb-3">
-    <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save Settings</button>
-  </div>
-
-  <!-- Generate Payment Link Section -->
-  <div class="bg-white rounded-xl shadow p-6 mb-6">
-    <h2 class="text-xl font-semibold mb-4">Generate Payment Link</h2>
-    <input id="custName" type="text" placeholder="Customer Name" class="border rounded p-2 w-full mb-3">
-    <input id="amount" type="number" placeholder="Amount (INR)" class="border rounded p-2 w-full mb-3">
-    <button onclick="generateLink()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Generate</button>
-    <div id="linkResult" class="mt-4 text-sm break-words"></div>
-  </div>
-
-  <!-- History Table -->
-  <div class="bg-white rounded-xl shadow p-6">
-    <h2 class="text-xl font-semibold mb-4">Generated Links</h2>
-    <table class="w-full text-left border">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="p-2 border">Customer</th>
-          <th class="p-2 border">Amount</th>
-          <th class="p-2 border">Link</th>
-        </tr>
-      </thead>
-      <tbody id="historyTable"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Payment Page -->
-<div id="paymentPage" class="hidden flex items-center justify-center min-h-screen">
-  <div class="bg-white rounded-xl shadow p-8 text-center max-w-md w-full">
-    <h1 class="text-2xl font-bold mb-4">Complete Your Payment</h1>
-    <p class="text-gray-700 mb-2">Paying <span id="payName" class="font-semibold"></span></p>
-    <p class="text-gray-700 mb-6">Amount: ₹<span id="payAmount" class="font-semibold"></span></p>
-    <a id="upiLink" class="block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mb-4">Pay Now</a>
-    <p class="text-xs text-gray-500">This will open your UPI app.</p>
-  </div>
-</div>
-
-<script>
-  // Detect if it's a payment page (via ?pay=... params)
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('pay')) {
-    document.getElementById('paymentPage').classList.remove('hidden');
-    const name = decodeURIComponent(urlParams.get('name') || '');
-    const amount = decodeURIComponent(urlParams.get('amount') || '');
-    const upiId = decodeURIComponent(urlParams.get('upi') || '');
-    document.getElementById('payName').innerText = name;
-    document.getElementById('payAmount').innerText = amount;
-    const txnNote = encodeURIComponent(name);
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${txnNote}`;
-    document.getElementById('upiLink').href = upiLink;
-  } else {
-    document.getElementById('dashboard').classList.remove('hidden');
-  }
-
-  // Load settings from localStorage
-  window.onload = function() {
-    const savedUpi = localStorage.getItem("upiId");
-    const savedNote = localStorage.getItem("defaultNote");
-    if (savedUpi) document.getElementById("upiId").value = savedUpi;
-    if (savedNote) document.getElementById("defaultNote").value = savedNote;
-    loadHistory();
-  }
-
-  function saveSettings() {
-    const upiId = document.getElementById("upiId").value.trim();
-    const note = document.getElementById("defaultNote").value.trim();
-    if (!upiId) { alert("Please enter your UPI ID."); return; }
-    localStorage.setItem("upiId", upiId);
-    localStorage.setItem("defaultNote", note);
-    alert("UPI settings saved!");
-  }
-
-  function generateLink() {
-    const upiId = localStorage.getItem("upiId");
-    const note = localStorage.getItem("defaultNote") || "";
-    const custName = document.getElementById("custName").value.trim();
-    const amount = document.getElementById("amount").value.trim();
-
-    if (!upiId) { alert("Please set your UPI ID first."); return; }
-    if (!custName || !amount) { alert("Please enter customer name and amount."); return; }
-
-    // Generate link back to same page but with params
-    const link = `${window.location.origin}${window.location.pathname}?pay=1&upi=${encodeURIComponent(upiId)}&name=${encodeURIComponent(custName)}&amount=${encodeURIComponent(amount)}`;
-    document.getElementById("linkResult").innerHTML = `<strong>Payment Link:</strong><br><a href="${link}" class="text-blue-600 underline" target="_blank">${link}</a>`;
-
-    saveToHistory(custName, amount, link);
-  }
-
-  function saveToHistory(name, amount, link) {
-    let history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-    history.push({name, amount, link});
-    localStorage.setItem("paymentHistory", JSON.stringify(history));
-    loadHistory();
-  }
-
-  function loadHistory() {
-    const history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-    const table = document.getElementById("historyTable");
-    table.innerHTML = "";
-    history.forEach(row => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="p-2 border">${row.name}</td>
-        <td class="p-2 border">₹${row.amount}</td>
-        <td class="p-2 border text-blue-600 underline break-words"><a href="${row.link}" target="_blank">Open</a></td>`;
-      table.appendChild(tr);
-    });
-  }
-</script>
-</body>
-</html>
-      <label class="block font-medium mb-1">Default Note</label>
-      <input id="defaultNote" type="text" placeholder="Payment for services"
-        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
-      <button onclick="saveSettings()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">Save Settings</button>
-    </section>
-
-    <!-- Generate Link -->
-    <section class="bg-white rounded-xl shadow p-6 mb-6">
-      <h3 class="text-lg font-semibold mb-4">Generate Payment Link</h3>
-      <label class="block font-medium mb-1">Customer Name</label>
-      <input id="custName" type="text" placeholder="Enter customer name"
-        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
-      <label class="block font-medium mb-1">Amount (INR)</label>
-      <input id="amount" type="number" placeholder="Enter amount"
-        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
-      <button onclick="generateLink()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">Generate Link</button>
-      <div id="linkResult" class="mt-4 p-3 bg-gray-100 rounded-lg text-sm break-words"></div>
-    </section>
-
-    <!-- Payment History -->
-    <section class="bg-white rounded-xl shadow p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold">Generated Links History</h3>
-        <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Clear History</button>
+<body class="bg-slate-50 text-slate-800">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-white shadow-soft flex flex-col fixed md:static inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out z-50">
+      <div class="p-4 flex items-center gap-3 border-b">
+        <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold">₹</div>
+        <h1 class="font-semibold text-lg">UPI Dashboard</h1>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-blue-500 text-white">
-              <th class="p-3">Customer</th>
-              <th class="p-3">Amount</th>
-              <th class="p-3">Link</th>
-              <th class="p-3">Action</th>
-            </tr>
-          </thead>
-          <tbody id="historyTable" class="divide-y">
-            <!-- Filled by JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+      <nav class="flex-1 p-4 space-y-2 text-sm">
+        <a href="#" class="block px-3 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium">Generate Link</a>
+        <a href="#settings" class="block px-3 py-2 rounded-lg hover:bg-slate-100">Settings</a>
+        <a href="#txns" class="block px-3 py-2 rounded-lg hover:bg-slate-100">Transactions</a>
+      </nav>
+      <div class="p-4 border-t text-xs text-slate-500">Single-file • Data stays local</div>
+    </aside>
 
-<script>
-  // Load settings and history
-  window.onload = function() {
-    const savedUpi = localStorage.getItem("upiId");
-    const savedNote = localStorage.getItem("defaultNote");
-    if (savedUpi) document.getElementById("upiId").value = savedUpi;
-    if (savedNote) document.getElementById("defaultNote").value = savedNote;
-    loadHistory();
-  }
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col">
+      <!-- Mobile Topbar -->
+      <header class="md:hidden flex items-center justify-between bg-white shadow-soft p-4">
+        <div class="font-semibold">UPI Dashboard</div>
+        <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-primary-600 text-white">☰</button>
+      </header>
 
-  function saveSettings() {
-    const upiId = document.getElementById("upiId").value.trim();
-    const note = document.getElementById("defaultNote").value.trim();
-    if (!upiId) { alert("Please enter your UPI ID."); return; }
-    localStorage.setItem("upiId", upiId);
-    localStorage.setItem("defaultNote", note);
-    alert("UPI settings saved!");
-  }
+      <main class="flex-1 p-6 overflow-auto md:ml-0">
+        <section id="generate" class="mb-6">
+          <h2 class="text-xl font-bold mb-4">Generate Payment Link</h2>
+          <form class="grid md:grid-cols-2 gap-4 bg-white p-4 rounded-2xl shadow-soft">
+            <div>
+              <label class="text-xs text-slate-500">Customer Name</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., Aisha Khan">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Amount (INR)</label>
+              <input type="number" step="0.01" class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., 999.00">
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs text-slate-500">Purpose / Note</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., Website design advance">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Order / Ref ID</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="Auto-generated">
+            </div>
+            <div class="flex items-center gap-2 mt-6">
+              <input type="checkbox" class="rounded text-primary-600">
+              <label class="text-sm">Test mode (₹1)</label>
+            </div>
+            <div class="md:col-span-2 flex gap-2 mt-2">
+              <button class="px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700">Generate</button>
+              <button type="reset" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Reset</button>
+            </div>
+          </form>
+          <div id="output" class="hidden mt-4 bg-white rounded-2xl shadow-soft p-4"></div>
+        </section>
 
-  function generateLink() {
-    const upiId = localStorage.getItem("upiId");
-    const note = localStorage.getItem("defaultNote") || "";
-    const custName = document.getElementById("custName").value.trim();
-    const amount = document.getElementById("amount").value.trim();
+        <section id="settings" class="mb-6">
+          <h2 class="text-xl font-bold mb-4">Settings</h2>
+          <form class="grid md:grid-cols-2 gap-4 bg-white p-4 rounded-2xl shadow-soft">
+            <div>
+              <label class="text-xs text-slate-500">Merchant / Business Name</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">UPI ID</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">Default Note</label>
+              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs text-slate-500">Thank-you Message</label>
+              <textarea rows="2" class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500"></textarea>
+            </div>
+            <div class="md:col-span-2 flex gap-2 mt-2">
+              <button class="px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700">Save</button>
+              <button type="reset" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Clear</button>
+            </div>
+          </form>
+        </section>
 
-    if (!upiId) { alert("Please set your UPI ID first."); return; }
-    if (!custName || !amount) { alert("Please enter customer name and amount."); return; }
-
-    const payeeName = encodeURIComponent(custName);
-    const txnNote = encodeURIComponent(note || custName);
-    const link = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amount}&cu=INR&tn=${txnNote}`;
-
-    document.getElementById("linkResult").innerHTML = 
-      `<strong>Payment Link:</strong><br><a href="${link}" class="text-blue-600 underline">${link}</a>`;
-
-    const history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-    history.push({ name: custName, amount: amount, link: link });
-    localStorage.setItem("paymentHistory", JSON.stringify(history));
-    loadHistory();
-  }
-
-  function loadHistory() {
-    const history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
-    const table = document.getElementById("historyTable");
-    table.innerHTML = "";
-    history.forEach((h) => {
-      const row = document.createElement("tr");
-      row.className = "hover:bg-gray-50";
-      row.innerHTML = `
-        <td class="p-3">${h.name}</td>
-        <td class="p-3">₹${h.amount}</td>
-        <td class="p-3 break-words text-sm text-gray-700">${h.link}</td>
-        <td class="p-3">
-          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
-            onclick="copyLink('${h.link}')">Copy</button>
-        </td>
-      `;
-      table.appendChild(row);
-    });
-  }
-
-  function copyLink(link) {
-    navigator.clipboard.writeText(link).then(() => {
-      alert("Payment link copied to clipboard!");
-    });
-  }
-
-  function clearHistory() {
-    if (confirm("Are you sure you want to clear the payment history?")) {
-      localStorage.removeItem("paymentHistory");
-      loadHistory();
-    }
-  }
-</script>
-
-</body>
-</html>    .right{margin-left:auto}
-    .hidden{display:none !important}
-    footer{margin-top:22px; color:var(--muted); font-size:12px}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>UPI Payment Admin Dashboard <span class="tag"><span>no backend</span></span></h1>
-      <div class="tabs">
-        <button id="tab-admin" class="tab active" onclick="switchTab('admin')">Admin</button>
-        <button id="tab-generate" class="tab" onclick="switchTab('generate')">Generate Link</button>
-        <button id="tab-customer" class="tab" onclick="switchTab('customer')">Preview Payment Page</button>
-      </div>
-    </header>
-
-    <!-- ADMIN SETTINGS -->
-    <section id="page-admin" class="card">
-      <h2 style="margin:4px 0 10px 0">Business / UPI Settings</h2>
-      <div class="grid grid-2">
-        <div>
-          <label>UPI ID (pa)</label>
-          <input id="inp-upi" placeholder="yourname@bank or 98xxxxxx@ybl" autocomplete="off" />
-        </div>
-        <div>
-          <label>Business / Payee Name (pn)</label>
-          <input id="inp-name" placeholder="Your Business" autocomplete="off" />
-        </div>
-        <div>
-          <label>Default Note (tn) <span class="muted">optional</span></label>
-          <input id="inp-note" placeholder="e.g., Invoice / Order note" />
-        </div>
-        <div>
-          <label>Default Currency (cu)</label>
-          <select id="inp-currency">
-            <option value="INR" selected>INR</option>
-          </select>
-        </div>
-      </div>
-      <div class="row" style="margin-top:14px">
-        <button class="btn primary" onclick="saveSettings()">Save Settings</button>
-        <button class="btn ghost" onclick="loadSettings()">Reload</button>
-        <button class="btn danger" onclick="clearSettings()">Clear</button>
-        <span class="muted right" id="settings-status"></span>
-      </div>
-      <div class="divider"></div>
-      <p class="muted">These values are stored only in your browser using <span class="mono">localStorage</span>. No server required.</p>
-    </section>
-
-    <!-- GENERATE LINK -->
-    <section id="page-generate" class="card hidden">
-      <h2 style="margin:4px 0 10px 0">Generate Payment Link</h2>
-      <div class="grid grid-2">
-        <div>
-          <label>Customer Name</label>
-          <input id="inp-customer" placeholder="Customer full name" />
-        </div>
-        <div>
-          <label>Amount (INR)</label>
-          <input id="inp-amount" type="number" step="0.01" min="1" placeholder="500" />
-        </div>
-        <div>
-          <label>Reference / Order ID (tr) <span class="muted">optional</span></label>
-          <input id="inp-ref" placeholder="e.g., ORD-1042" />
-        </div>
-        <div>
-          <label>Custom Note (tn) <span class="muted">optional overrides default</span></label>
-          <input id="inp-custom-note" placeholder="e.g., Rahul - June subscription" />
-        </div>
-      </div>
-      <div class="row" style="margin-top:14px">
-        <button class="btn primary" onclick="makeLinks()">Generate</button>
-        <span class="muted right" id="gen-status"></span>
-      </div>
-
-      <div id="results" class="hidden" style="margin-top:16px">
-        <div class="row" style="justify-content:space-between">
-          <div class="tag">Direct UPI Deep Link</div>
-          <div class="row">
-            <button class="btn" onclick="copy('#out-upi')">Copy</button>
-            <a class="btn success" id="btn-open-upi">Open</a>
+        <section id="txns">
+          <h2 class="text-xl font-bold mb-4">Transactions</h2>
+          <div class="bg-white rounded-2xl shadow-soft p-4">
+            <div class="flex justify-between mb-3">
+              <div class="text-sm text-slate-500">Saved locally</div>
+              <div class="flex gap-2">
+                <button class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Export CSV</button>
+                <button class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Clear</button>
+              </div>
+            </div>
+            <div class="max-h-72 overflow-auto text-sm" id="txnList">
+              <div class="text-slate-500">No transactions yet.</div>
+            </div>
           </div>
-        </div>
-        <div id="out-upi" class="code mono" style="margin-top:8px"></div>
-
-        <div class="row" style="justify-content:space-between; margin-top:16px">
-          <div class="tag">Shareable Payment Page Link</div>
-          <div class="row">
-            <button class="btn" onclick="copy('#out-web')">Copy</button>
-            <a class="btn" id="btn-open-web" target="_blank">Open</a>
-          </div>
-        </div>
-        <div id="out-web" class="code mono" style="margin-top:8px"></div>
-      </div>
-
-      <div class="divider"></div>
-      <details>
-        <summary class="muted">What do these links do?</summary>
-        <p class="muted">The <b>UPI deep link</b> opens installed UPI apps directly using the standard format <span class="mono">upi://pay?... </span>. The <b>Payment Page link</b> points to this same HTML file with query parameters; when your customer opens it, the page shows a simple "Pay Now" button that triggers the deep link.</p>
-      </details>
-    </section>
-
-    <!-- CUSTOMER PAGE (PREVIEW) -->
-    <section id="page-customer" class="card hidden">
-      <h2 style="margin:4px 0 10px 0">Customer Payment Page</h2>
-      <p class="muted">This is what customers see when you share the Payment Page link.</p>
-      <div id="cust-box" class="card" style="background:#0c1330; border-style:dashed">
-        <div class="grid grid-2">
-          <div>
-            <div class="muted">Payee</div>
-            <div id="cust-pn" style="font-weight:600; font-size:18px">—</div>
-            <div class="muted">UPI ID</div>
-            <div id="cust-pa" class="mono">—</div>
-          </div>
-          <div>
-            <div class="muted">Customer</div>
-            <div id="cust-name" style="font-weight:600; font-size:18px">—</div>
-            <div class="muted">Amount</div>
-            <div id="cust-amt" style="font-weight:700; font-size:24px">—</div>
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <div class="muted">Note</div>
-          <div id="cust-tn">—</div>
-          <div class="muted" style="margin-top:8px">Reference</div>
-          <div id="cust-tr" class="mono">—</div>
-        </div>
-        <div class="row" style="margin-top:16px">
-          <a id="cust-pay" class="btn success" href="#">Pay Now</a>
-          <button class="btn" onclick="copy('#cust-upi-link')">Copy UPI Link</button>
-          <div id="cust-upi-link" class="hidden"></div>
-        </div>
-      </div>
-    </section>
-
-    <footer>
-      <div class="row">
-        <span>Made for quick UPI requests • Works offline • Save this file and host anywhere.</span>
-        <span class="right muted">Tip: Add to mobile home screen for faster access.</span>
-      </div>
-    </footer>
-  </div>
-
-<script>
-  const LS_KEY = 'upi-dashboard-settings-v1';
-
-  function $(sel){return document.querySelector(sel)}
-  function enc(v){return encodeURIComponent(v || '')}
-  function dec(v){try{return decodeURIComponent(v||'')}catch{ return v||''}}
-
-  function switchTab(key){
-    const map = {admin:'#page-admin', generate:'#page-generate', customer:'#page-customer'};
-    for(const k in map){
-      const el = $(map[k]);
-      const tab = $('#tab-'+k);
-      if(k===key){ el.classList.remove('hidden'); tab.classList.add('active'); }
-      else{ el.classList.add('hidden'); tab.classList.remove('active'); }
-    }
-  }
-
-  function loadSettings(){
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw){ $('#settings-status').textContent = 'No saved settings yet.'; return }
-    try{
-      const s = JSON.parse(raw);
-      $('#inp-upi').value = s.pa || '';
-      $('#inp-name').value = s.pn || '';
-      $('#inp-note').value = s.tn || '';
-      $('#inp-currency').value = s.cu || 'INR';
-      $('#settings-status').textContent = 'Loaded saved settings.';
-    }catch(e){ $('#settings-status').textContent = 'Could not parse saved settings.' }
-  }
-
-  function saveSettings(){
-    const pa = $('#inp-upi').value.trim();
-    const pn = $('#inp-name').value.trim();
-    const tn = $('#inp-note').value.trim();
-    const cu = $('#inp-currency').value;
-
-    if(!isValidUpi(pa)) { status('settings','Invalid UPI ID format'); return }
-    if(!pn){ status('settings','Business/Payee name required'); return }
-
-    localStorage.setItem(LS_KEY, JSON.stringify({pa,pn,tn,cu}));
-    status('settings','Saved ✓');
-  }
-
-  function clearSettings(){
-    localStorage.removeItem(LS_KEY);
-    $('#inp-upi').value=''; $('#inp-name').value=''; $('#inp-note').value='';
-    status('settings','Cleared');
-  }
-
-  function status(scope,msg){
-    const id = scope==='settings' ? '#settings-status' : '#gen-status';
-    const el = $(id); el.textContent = msg; setTimeout(()=>{ el.textContent=''; }, 3000)
-  }
-
-  function isValidUpi(pa){
-    // Simple but practical UPI regex: user@handle, allows dots and digits
-    return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(pa)
-  }
-
-  function formatINR(n){
-    try{ return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(n)) }catch{ return '₹'+n }
-  }
-
-  function getSettings(){
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return null; try{ return JSON.parse(raw) }catch{ return null }
-  }
-
-  function makeLinks(){
-    const s = getSettings();
-    if(!s){ status('gen','Save settings first in Admin tab'); return }
-
-    const customer = $('#inp-customer').value.trim();
-    const amount = $('#inp-amount').value.trim();
-    const tr = $('#inp-ref').value.trim();
-    const noteInput = $('#inp-custom-note').value.trim();
-
-    if(!customer){ status('gen','Customer name required'); return }
-    const amt = Number(amount);
-    if(!amt || amt <= 0){ status('gen','Enter a valid amount'); return }
-
-    const tn = noteInput || s.tn || `Payment from ${customer}`;
-
-    const params = new URLSearchParams();
-    params.set('pa', s.pa);
-    params.set('pn', s.pn);
-    params.set('am', amt.toFixed(2));
-    params.set('cu', s.cu || 'INR');
-    if(tn) params.set('tn', tn);
-    if(tr) params.set('tr', tr);
-
-    // UPI deep link
-    const upi = `upi://pay?${params.toString()}`;
-
-    // Web link to this same file with customer-specific params for a nice landing page
-    const base = location.href.split('?')[0].split('#')[0];
-    const webParams = new URLSearchParams();
-    webParams.set('name', customer);
-    webParams.set('amount', amt.toFixed(2));
-    webParams.set('pa', s.pa);
-    webParams.set('pn', s.pn);
-    if(tn) webParams.set('tn', tn);
-    if(tr) webParams.set('tr', tr);
-    const web = `${base}?${webParams.toString()}#pay`;
-
-    // Output
-    $('#out-upi').textContent = upi;
-    $('#out-web').textContent = web;
-    $('#btn-open-upi').href = upi;
-    $('#btn-open-web').href = web;
-    $('#results').classList.remove('hidden');
-  }
-
-  function copy(sel){
-    const el = $(sel);
-    const text = el.textContent || el.value || '';
-    navigator.clipboard.writeText(text).then(()=>{
-      const old = el.style.outline; el.style.outline = '2px solid var(--accent)';
-      setTimeout(()=>{ el.style.outline=old }, 600)
-    })
-  }
-
-  // CUSTOMER PAGE LOGIC – runs when query params are present
-  function hydrateCustomerPage(){
-    const url = new URL(location.href);
-    const q = url.searchParams;
-    if(!q.get('name') && !q.get('amount')) return; // nothing to preview
-
-    switchTab('customer');
-
-    const pa = q.get('pa') || (getSettings()?.pa || '');
-    const pn = q.get('pn') || (getSettings()?.pn || '');
-    const name = q.get('name') || '';
-    const amount = q.get('amount') || '';
-    const tn = q.get('tn') || (getSettings()?.tn || '');
-    const tr = q.get('tr') || '';
-
-    $('#cust-pn').textContent = pn || '—';
-    $('#cust-pa').textContent = pa || '—';
-    $('#cust-name').textContent = name || '—';
-    $('#cust-amt').textContent = amount ? formatINR(amount) : '—';
-    $('#cust-tn').textContent = tn || '—';
-    $('#cust-tr').textContent = tr || '—';
-
-    const params = new URLSearchParams();
-    if(pa) params.set('pa', pa);
-    if(pn) params.set('pn', pn);
-    if(amount) params.set('am', Number(amount).toFixed(2));
-    params.set('cu', 'INR');
-    if(tn) params.set('tn', tn);
-    if(tr) params.set('tr', tr);
-
-    const upi = `upi://pay?${params.toString()}`;
-    $('#cust-pay').href = upi;
-    $('#cust-upi-link').textContent = upi;
-  }
-
-  // INIT
-  loadSettings();
-  hydrateCustomerPage();
-</script>
-</body>
-</html>      border-radius: 5px;
-      font-size: 1rem;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .link-box {
-      background: #f1f1f1;
-      padding: 10px;
-      border-radius: 5px;
-      word-wrap: break-word;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>UPI Payment Dashboard</h1>
-
-    <label for="upiId">Your UPI ID (saved)</label>
-    <input type="text" id="upiId" placeholder="example@upi">
-
-    <label for="name">Customer Name</label>
-    <input type="text" id="name" placeholder="Enter customer name">
-
-    <label for="amount">Amount (INR)</label>
-    <input type="number" id="amount" placeholder="Enter amount">
-
-    <button onclick="generateLink()">Generate Payment Link</button>
-
-    <div id="output" style="display:none;">
-      <label>Payment Link</label>
-      <div class="link-box" id="paymentLink"></div>
-      <button onclick="copyLink()">Copy to Clipboard</button>
+        </section>
+      </main>
     </div>
   </div>
 
   <script>
-    // Save UPI ID in browser storage so you only enter it once
-    const upiInput = document.getElementById('upiId');
-    if(localStorage.getItem('upiId')){
-      upiInput.value = localStorage.getItem('upiId');
-    }
-
-    function generateLink(){
-      const upiId = document.getElementById('upiId').value.trim();
-      const name = document.getElementById('name').value.trim();
-      const amount = document.getElementById('amount').value.trim();
-
-      if(!upiId || !name || !amount){
-        alert('Please fill all fields');
-        return;
-      }
-
-      // Save UPI ID locally
-      localStorage.setItem('upiId', upiId);
-
-      const url = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(name)}&am=${encodeURIComponent(amount)}&cu=INR`;
-      document.getElementById('paymentLink').innerText = url;
-      document.getElementById('output').style.display = 'block';
-    }
-
-    function copyLink(){
-      const link = document.getElementById('paymentLink').innerText;
-      navigator.clipboard.writeText(link).then(() => {
-        alert('Payment link copied to clipboard!');
-      });
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('-translate-x-full');
     }
   </script>
 </body>
-</html> 
+</html>
