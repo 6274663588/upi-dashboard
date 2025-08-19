@@ -1,133 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UPI Payment Gateway Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPI Payment Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: {
-              50: '#f4f7ff', 100: '#e2e8ff', 500: '#3b5bfd', 600: '#2e46cc', 700: '#22359e'
-            }
-          },
-          boxShadow: { soft: '0 8px 24px rgba(0,0,0,0.08)' }
-        }
-      }
-    }
-  </script>
-  <style>input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}</style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800">
-  <div class="min-h-screen flex">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-white shadow-soft flex flex-col fixed md:static inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out z-50">
-      <div class="p-4 flex items-center gap-3 border-b">
-        <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold">₹</div>
-        <h1 class="font-semibold text-lg">UPI Dashboard</h1>
-      </div>
-      <nav class="flex-1 p-4 space-y-2 text-sm">
-        <a href="#" class="block px-3 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium">Generate Link</a>
-        <a href="#settings" class="block px-3 py-2 rounded-lg hover:bg-slate-100">Settings</a>
-        <a href="#txns" class="block px-3 py-2 rounded-lg hover:bg-slate-100">Transactions</a>
-      </nav>
-      <div class="p-4 border-t text-xs text-slate-500">Single-file • Data stays local</div>
-    </aside>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+  <div class="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">UPI Payment Dashboard</h1>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col">
-      <!-- Mobile Topbar -->
-      <header class="md:hidden flex items-center justify-between bg-white shadow-soft p-4">
-        <div class="font-semibold">UPI Dashboard</div>
-        <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-primary-600 text-white">☰</button>
-      </header>
+    <!-- UPI ID input (permanent) -->
+    <div class="mb-6">
+      <label class="block text-gray-700 font-medium mb-2">Your UPI ID</label>
+      <input id="upiId" type="text" placeholder="example@upi"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500">
+    </div>
 
-      <main class="flex-1 p-6 overflow-auto md:ml-0">
-        <section id="generate" class="mb-6">
-          <h2 class="text-xl font-bold mb-4">Generate Payment Link</h2>
-          <form class="grid md:grid-cols-2 gap-4 bg-white p-4 rounded-2xl shadow-soft">
-            <div>
-              <label class="text-xs text-slate-500">Customer Name</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., Aisha Khan">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500">Amount (INR)</label>
-              <input type="number" step="0.01" class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., 999.00">
-            </div>
-            <div class="md:col-span-2">
-              <label class="text-xs text-slate-500">Purpose / Note</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="e.g., Website design advance">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500">Order / Ref ID</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500" placeholder="Auto-generated">
-            </div>
-            <div class="flex items-center gap-2 mt-6">
-              <input type="checkbox" class="rounded text-primary-600">
-              <label class="text-sm">Test mode (₹1)</label>
-            </div>
-            <div class="md:col-span-2 flex gap-2 mt-2">
-              <button class="px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700">Generate</button>
-              <button type="reset" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Reset</button>
-            </div>
-          </form>
-          <div id="output" class="hidden mt-4 bg-white rounded-2xl shadow-soft p-4"></div>
-        </section>
+    <!-- Standard Note input (permanent) -->
+    <div class="mb-6">
+      <label class="block text-gray-700 font-medium mb-2">Standard Payment Note</label>
+      <input id="standardNote" type="text" placeholder="Payment for services"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500">
+    </div>
 
-        <section id="settings" class="mb-6">
-          <h2 class="text-xl font-bold mb-4">Settings</h2>
-          <form class="grid md:grid-cols-2 gap-4 bg-white p-4 rounded-2xl shadow-soft">
-            <div>
-              <label class="text-xs text-slate-500">Merchant / Business Name</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500">UPI ID</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500">Default Note</label>
-              <input class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500">
-            </div>
-            <div class="md:col-span-2">
-              <label class="text-xs text-slate-500">Thank-you Message</label>
-              <textarea rows="2" class="mt-1 w-full rounded-xl border-slate-300 focus:border-primary-500 focus:ring-primary-500"></textarea>
-            </div>
-            <div class="md:col-span-2 flex gap-2 mt-2">
-              <button class="px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700">Save</button>
-              <button type="reset" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Clear</button>
-            </div>
-          </form>
-        </section>
+    <hr class="my-6">
 
-        <section id="txns">
-          <h2 class="text-xl font-bold mb-4">Transactions</h2>
-          <div class="bg-white rounded-2xl shadow-soft p-4">
-            <div class="flex justify-between mb-3">
-              <div class="text-sm text-slate-500">Saved locally</div>
-              <div class="flex gap-2">
-                <button class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Export CSV</button>
-                <button class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Clear</button>
-              </div>
-            </div>
-            <div class="max-h-72 overflow-auto text-sm" id="txnList">
-              <div class="text-slate-500">No transactions yet.</div>
-            </div>
-          </div>
-        </section>
-      </main>
+    <!-- Customer-specific input -->
+    <div class="mb-4">
+      <label class="block text-gray-700 font-medium mb-2">Customer Name</label>
+      <input id="customerName" type="text" placeholder="John Doe"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500">
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-gray-700 font-medium mb-2">Amount (₹)</label>
+      <input id="amount" type="number" placeholder="500"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500">
+    </div>
+
+    <button onclick="generateLink()" 
+      class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-lg text-lg">
+      Generate Payment Link
+    </button>
+
+    <!-- Output link -->
+    <div id="result" class="mt-6 text-center hidden">
+      <p class="text-gray-700 mb-2">Generated Link:</p>
+      <a id="paymentLink" href="#" target="_blank" 
+         class="break-all text-green-700 underline"></a>
     </div>
   </div>
 
-  <script>
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('-translate-x-full');
+<script>
+  function generateLink() {
+    const upiId = document.getElementById('upiId').value.trim();
+    const note = document.getElementById('standardNote').value.trim();
+    const customer = document.getElementById('customerName').value.trim();
+    const amount = document.getElementById('amount').value.trim();
+
+    if (!upiId || !customer || !amount) {
+      alert("Please fill in UPI ID, Customer Name, and Amount.");
+      return;
     }
-  </script>
+
+    // Build encoded link
+    const baseURL = window.location.origin + window.location.pathname.replace('index.html','') + 'pay.html';
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: customer,
+      am: amount,
+      tn: note
+    }).toString();
+
+    const fullLink = `${baseURL}?${params}`;
+
+    document.getElementById('paymentLink').href = fullLink;
+    document.getElementById('paymentLink').textContent = fullLink;
+    document.getElementById('result').classList.remove('hidden');
+  }
+</script>
 </body>
 </html>
