@@ -1,40 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UPI Payment Admin Dashboard</title>
-  <style>
-    :root{
-      --bg:#0b1020; --card:#121832; --muted:#7e8bb6; --text:#e7ecff; --accent:#7aa2ff; --accent-2:#4ade80; --danger:#ef4444;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPI Payment Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-gradient-to-b from-gray-900 to-gray-700 text-white flex-shrink-0 hidden md:block">
+    <div class="p-6">
+      <h2 class="text-2xl font-bold mb-8">Payment Admin</h2>
+      <nav class="space-y-2">
+        <a href="#" class="block py-2 px-4 rounded hover:bg-gray-600">Dashboard</a>
+        <a href="#" class="block py-2 px-4 rounded hover:bg-gray-600">Generate Link</a>
+        <a href="#" class="block py-2 px-4 rounded hover:bg-gray-600">Settings</a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 p-4 md:p-8">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow p-4 mb-6 flex justify-between items-center">
+      <h1 class="text-xl font-semibold">Welcome, Admin</h1>
+      <button onclick="alert('Logged out!')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
+    </div>
+
+    <!-- UPI Settings -->
+    <section class="bg-white rounded-xl shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4">Set Your UPI ID</h3>
+      <label class="block font-medium mb-1">UPI ID</label>
+      <input id="upiId" type="text" placeholder="example@upi"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
+      <label class="block font-medium mb-1">Default Note</label>
+      <input id="defaultNote" type="text" placeholder="Payment for services"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
+      <button onclick="saveSettings()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">Save Settings</button>
+    </section>
+
+    <!-- Generate Link -->
+    <section class="bg-white rounded-xl shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4">Generate Payment Link</h3>
+      <label class="block font-medium mb-1">Customer Name</label>
+      <input id="custName" type="text" placeholder="Enter customer name"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
+      <label class="block font-medium mb-1">Amount (INR)</label>
+      <input id="amount" type="number" placeholder="Enter amount"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring focus:ring-blue-300">
+      <button onclick="generateLink()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">Generate Link</button>
+      <div id="linkResult" class="mt-4 p-3 bg-gray-100 rounded-lg text-sm break-words"></div>
+    </section>
+
+    <!-- Payment History -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">Generated Links History</h3>
+        <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Clear History</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-blue-500 text-white">
+              <th class="p-3">Customer</th>
+              <th class="p-3">Amount</th>
+              <th class="p-3">Link</th>
+              <th class="p-3">Action</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable" class="divide-y">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+<script>
+  // Load settings and history
+  window.onload = function() {
+    const savedUpi = localStorage.getItem("upiId");
+    const savedNote = localStorage.getItem("defaultNote");
+    if (savedUpi) document.getElementById("upiId").value = savedUpi;
+    if (savedNote) document.getElementById("defaultNote").value = savedNote;
+    loadHistory();
+  }
+
+  function saveSettings() {
+    const upiId = document.getElementById("upiId").value.trim();
+    const note = document.getElementById("defaultNote").value.trim();
+    if (!upiId) { alert("Please enter your UPI ID."); return; }
+    localStorage.setItem("upiId", upiId);
+    localStorage.setItem("defaultNote", note);
+    alert("UPI settings saved!");
+  }
+
+  function generateLink() {
+    const upiId = localStorage.getItem("upiId");
+    const note = localStorage.getItem("defaultNote") || "";
+    const custName = document.getElementById("custName").value.trim();
+    const amount = document.getElementById("amount").value.trim();
+
+    if (!upiId) { alert("Please set your UPI ID first."); return; }
+    if (!custName || !amount) { alert("Please enter customer name and amount."); return; }
+
+    const payeeName = encodeURIComponent(custName);
+    const txnNote = encodeURIComponent(note || custName);
+    const link = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amount}&cu=INR&tn=${txnNote}`;
+
+    document.getElementById("linkResult").innerHTML = 
+      `<strong>Payment Link:</strong><br><a href="${link}" class="text-blue-600 underline">${link}</a>`;
+
+    const history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+    history.push({ name: custName, amount: amount, link: link });
+    localStorage.setItem("paymentHistory", JSON.stringify(history));
+    loadHistory();
+  }
+
+  function loadHistory() {
+    const history = JSON.parse(localStorage.getItem("paymentHistory") || "[]");
+    const table = document.getElementById("historyTable");
+    table.innerHTML = "";
+    history.forEach((h) => {
+      const row = document.createElement("tr");
+      row.className = "hover:bg-gray-50";
+      row.innerHTML = `
+        <td class="p-3">${h.name}</td>
+        <td class="p-3">₹${h.amount}</td>
+        <td class="p-3 break-words text-sm text-gray-700">${h.link}</td>
+        <td class="p-3">
+          <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
+            onclick="copyLink('${h.link}')">Copy</button>
+        </td>
+      `;
+      table.appendChild(row);
+    });
+  }
+
+  function copyLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+      alert("Payment link copied to clipboard!");
+    });
+  }
+
+  function clearHistory() {
+    if (confirm("Are you sure you want to clear the payment history?")) {
+      localStorage.removeItem("paymentHistory");
+      loadHistory();
     }
-    *{box-sizing:border-box}
-    body{margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:linear-gradient(180deg,#0b1020,#0b1226); color:var(--text)}
-    .container{max-width:1100px; margin:32px auto; padding:0 16px}
-    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px}
-    h1{font-size:24px; margin:0; letter-spacing:.3px}
-    .tabs{display:flex; gap:8px; flex-wrap:wrap}
-    .tab{padding:10px 14px; border-radius:999px; border:1px solid #2b3566; cursor:pointer; color:var(--muted); background:#0e1430}
-    .tab.active{background:var(--accent); color:#051026; border-color:transparent}
-    .card{background:var(--card); border:1px solid #1b2450; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.3)}
-    .grid{display:grid; gap:14px}
-    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-    @media (max-width:840px){.grid-2{grid-template-columns:1fr}}
-    label{display:block; font-size:12px; color:var(--muted); margin:4px 2px}
-    input, textarea, select{width:100%; background:#0e1430; color:var(--text); border:1px solid #2b3566; border-radius:12px; padding:12px 12px; outline:none}
-    input:focus, textarea:focus{border-color:var(--accent)}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .btn{appearance:none; border:1px solid #2b3566; background:#0f1536; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer}
-    .btn.primary{background:var(--accent); border-color:transparent; color:#07122a; font-weight:600}
-    .btn.success{background:var(--accent-2); border-color:transparent; color:#041312; font-weight:600}
-    .btn.ghost{background:transparent}
-    .btn.danger{background:var(--danger); border-color:transparent}
-    .muted{color:var(--muted)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-    .code{background:#0e1430; border:1px dashed #2b3566; padding:10px; border-radius:12px; word-break:break-all}
-    .divider{height:1px; background:#1b2450; margin:14px 0}
-    .tag{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:6px 10px; border:1px solid #2b3566; border-radius:999px; color:var(--muted)}
-    .right{margin-left:auto}
+  }
+</script>
+
+</body>
+</html>    .right{margin-left:auto}
     .hidden{display:none !important}
     footer{margin-top:22px; color:var(--muted); font-size:12px}
   </style>
